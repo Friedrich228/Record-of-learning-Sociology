@@ -1,0 +1,122 @@
+// 说明：由于涉及文件存储路径，故本节内容不以do-file形式呈现。
+*** 数据的合并与转换 ***
+*** 纵向合并 ：append 把别的数据追加到当前数据窗口之下，变量基本一致，观测量大幅增加；对方库内没有的变量，合并后显示为缺失值，不会相互替代
+//每次运行不同的合并命令时，都要重新整理一次用于实操的文件夹，不然很麻烦。原始数据最好多点备份
+** 操作1：取同样的变量 且保持变量名一致
+clear
+use "文件路径\2018个人库.dta" 
+drop if _n>130
+keep pid age gender urban18 party qg11
+save "文件路径\2018个人库.dta", replace //修改后的版本会覆盖原文件（除非你新命名）
+clear
+use "文件路径\2020个人库.dta"
+drop if _n>112
+keep pid age gender urban20 party qg11
+save "文件路径\2020个人库.dta", replace
+* 保持变量名一致
+clear 
+use "文件路径\2018个人库.dta" 
+rename urban18 urban
+rename qg11 mincome
+save "文件路径\2018个人库.dta", replace
+clear
+use "文件路径\2020个人库.dta" 
+rename urban20 urban
+rename qg11 mincome
+save "文件路径\2020个人库.dta", replace
+* 开始合并
+append using "文件路径\2018个人库.dta" //以2020为主要数据，以2018为使用数据
+describe
+sum
+tab1 age gender urban party minc, missing
+
+** 操作2：如果取不同的变量，会发生什么？
+clear
+use "文件路径\2018个人库.dta" 
+drop if _n>330
+keep pid age urban18 qg11
+save "文件路径\2018个人库.dta", replace
+clear
+use "文件路径\2020个人库.dta"
+drop if _n>225
+keep gender cfps2020eduy party 
+save "文件路径\2020个人库.dta", replace
+append using "文件路径\2018个人库.dta" //以2020为主要数据，以2018为使用数据
+describe
+sum
+browse //没有重名的变量全部为缺失值了
+//纵向合并比较简单粗暴，不需要关键变量去对应。只是要注意，我们关注的跨数据库的变量，要是想把它们归到一起而不是各自为政，就要1、事先熟悉问卷及各数据库情况 2、把目标变量改为同样的名字（如上操作1所示例）
+
+*** 横向合并：merge
+** 1:1合并，通过某一个变量来合并，可以颠倒使用数据和主要数据
+*处理使用的变量库，保留基本社会人口学变量与身份标识
+use "文件路径\2018个人库.dta" 
+keep pid fid18 qa301 qn4001 qa002 cfps2018eduy_im qea1 age qg11 //变量标签见下行rename情况以及注释
+rename qea1 married //婚姻状况
+rename qa301 hk //户口
+rename qg11 m_income //月平均收入
+rename qn4001 party //是否党员
+rename qa002 gender //性别
+rename cfps2018eduy_im educ //最高教育年限（插补法）
+save "文件路径\2018个人库.dta", replace
+
+clear
+use "文件路径\2018家庭关系库.dta" 
+keep pid fid18 familysize18 tb2_a_p tb1y_a_p tb4_a18_p hukou_a18_p tb3_a18_p
+rename familysize18 size //家庭规模
+rename tb2_a_p gender //性别
+tab tb1y_a_p, nol //这里没有直接记录年龄，需要转换
+recode tb1y_a_p(-9 -1=.) //缺失值不要参与进来
+gen age=2018-tb1y_a_p //计算年龄
+tab age
+label variable age "个人年龄"
+rename tb3_a18_p married //婚姻状况
+rename tb4_a18_p edu_level //教育水平
+rename hukou_a18_p hk //户口
+drop tb1y_a_p
+save "文件路径\2018家庭关系库.dta",replace
+
+clear
+use "文件路径\2018家庭经济库.dta" 
+keep fid18 fo3 fo4 fp2 fq2 fq5 fq6 fs8 fhz3 fincome1
+rename fo3 inc_per //打工收入
+rename fo4 inc_home //家庭收入
+rename fp2 eat //有多少人吃饭
+rename fq2 house //房子归属权
+rename fq5 cost //买房成本
+rename fq6 price //现在的市价
+rename fs8 books //家庭藏书量
+rename fhz3 tidy //整洁度
+rename fincome1 inc_final //最终家庭收入
+save "文件路径\2018家庭经济库.dta", replace
+
+clear
+use "文件路径\2018个人库.dta"
+sort pid //两个数据库重合的、可用于身份标识的，是pid
+save "文件路径\2018个人库-sorted.dta" //命名一个新的文件是不用在option里面用“,replace”的
+clear
+use "文件路径\2018家庭关系库.dta"
+sort pid
+save "文件路径\2018家庭关系库-sorted.dta", replace
+merge 1:1 pid using "文件路径\2018个人库-sorted.dta"
+
+** 一对多和多对一合并问题。m:m 第一个数字代表这个关键变量在主要数据中的重复性为多少，如1的话，就是唯一的标识，比如个人id，m的话，就代表有重复，如家庭id；第二个数字代表关键变量在使用数据中的重复性，例子同上
+duplicates report pid //这个命令可以帮我们查找观测值重复的次数和各次数之下重复的obs的个数
+duplicates report fid18 //只出现一次的有3251个，说明有3251户家庭只有一个人参与调查；fid18出现两次的观察值有9270个，说明有9270/2户家庭有两个人参与调查，以此类推。
+* 实践一对多合并：关键变量在主要数据中不重复
+clear
+use "文件路径\2018家庭关系库.dta"
+duplicates report fid18 //查看重复情况，正合我意，有很多重复的。可以作为m，使用数据
+sort fid18
+save "文件路径\2018家庭关系库-fid18处理后.dta"
+clear
+use "文件路径\2018个人库.dta"
+duplicates report fid18 //查看家庭编码的重复情况，有很多重复
+duplicates drop fid18,force //所以需要人为地制造不重复情况
+sort fid18 //关键变量需要排序后再进行使用
+save "文件路径\2018个人库-fid18处理后.dta" //作为主要数据
+merge 1:m fid18 using "文件路径\2018家庭关系库-fid18处理后.dta" //最终结果为matched 55748，usingnoly 2756
+clear
+use "文件路径\2018家庭关系库-fid18处理后.dta" //现在来看看多对一的情况
+merge m:1 fid18 using "文件路径\2018个人库-fid18处理后.dta" //最终结果为matched 55748，onlymaster 2756
+//小结：一定要搞清楚关键变量在各自数据集中的情况，然后再来考虑使用一对一、一对多还是多对一的问题。多对多应当查看joinby命令，不推荐使用merge进行，故而在这里不作演示
