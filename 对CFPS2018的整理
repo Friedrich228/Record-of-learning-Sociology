@@ -1,0 +1,11 @@
+*** 清理数据库出来（不涉及追踪调查和面板数据问题）
+** 保留基本社会人口学变量与身份标识，请主要关注变量标签命名
+use "路径\2018个人库.dta" 
+keep pid fid18 qa301 qn4001 qa002 cfps2018eduy_im qea1 age qg11
+rename qea1 married //婚姻状况
+rename qa301 hk //户口
+rename qg11 m_income //月平均收入
+rename qn4001 party //是否党员
+rename qa002 gender //性别
+rename cfps2018eduy_im educ //最高教育年限（插补法）
+save "路径\2018个人库.dta", replace
