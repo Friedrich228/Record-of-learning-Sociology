@@ -1,29 +1,35 @@
 *** 清理数据库出来（不涉及追踪调查和面板数据问题）
 ** 保留基本社会人口学变量与身份标识，请主要关注变量标签命名
+clear
 use "路径\2018个人库.dta" 
-keep pid fid18 qa301 qn4001 qa002 cfps2018eduy_im qea1 age qg11
-rename qea1 married //婚姻状况
+keep pid fid18 qa301 qn4001 qa002 cfps2018eduy_im qea0 age qg11 qp101 qp102
+rename qea0 married //婚姻状况
 rename qa301 hk //户口
 rename qg11 m_income //月平均收入
 rename qn4001 party //是否党员
 rename qa002 gender //性别
 rename cfps2018eduy_im educ //最高教育年限（插补法）
-save "路径\2018个人库.dta", replace
-describe //查看数据库基本情况，接下来要进行一些数据清洗工作
-tab1 age gender hk married m_income party educ //查看缺失值情况
-tab1 age gender hk married m_income party educ, nol //查看缺失值情况
+rename qp101 height //当前身高
+rename qp102 weight //当前体重
+describe //查看数据库基本情况
+tab1 age gender hk married m_income party educ height weight //查看缺失值情况
+tab1 age gender hk married m_income party educ height weight, nol //查看缺失值情况
 recode age(-8=.)
 recode hk(-8 -1 79=.)
 recode married(-8=.)
 recode m_income(-9 -8 -2 -1=.)
 recode party(-8 -2 -1=.)
+recode height(-8 -2 -1=.)
+recode weight(-8 -2 -1=.)
 tab gender
 tab gender, nol //男=1 女=5
 recode gender(5=0) //改为男=1 女=0
 tab hk
 tab hk, nol //农业户口=1 非农户口=3 没有户口=5
 recode hk(3=0)(5=.) //改为农业=1 非农=0
+label define hk 0 "非农户口" 1 "农业户口"
 tab party
 tab party, nol //党员=1，非党员=0
 tab married
 tab married, nol //未婚=1 在婚=2 同居=3 离婚=4 丧偶=5
+save "路径\2018个人库.dta", replace
