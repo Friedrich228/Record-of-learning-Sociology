@@ -22,14 +22,23 @@ recode party(-8 -2 -1=.)
 recode height(-8 -2 -1=.)
 recode weight(-8 -2 -1=.)
 tab gender
-tab gender, nol //男=1 女=5
-recode gender(5=0) //改为男=1 女=0
+tab gender, nol //男=1 女=5，需要后续处理
 tab hk
 tab hk, nol //农业户口=1 非农户口=3 没有户口=5
-recode hk(3=0)(5=.) //改为农业=1 非农=0
-label define hk 0 "非农户口" 1 "农业户口"
+label drop gender hk //报错，说没有找到hk的value label。实际上，根本的问题在于，我们命名的变量名，只是在它的原始数据库的基础上去操作的，它们的value label实际上并不如此。可采用 describe或codebook 查看这种情况
+//recode gender(5=0) 如果通过这种方式粗暴地修改成（男=1 女=0）其根本问题仍未解决，强行labe define仍然无法把标签赋予上去，导致后续的一系列错误
+//recode hk(3=0)(5=.) 改为农业=1 非农=0，会出现同样的问题，强行这样是不对的 label define hk 0 "非农户口" 1 "农业户口"
 tab party
 tab party, nol //党员=1，非党员=0
 tab married
 tab married, nol //未婚=1 在婚=2 同居=3 离婚=4 丧偶=5
-save "路径\2018个人库.dta", replace
+describe //找到问题根由，重新进行值标签清理
+label drop qa002 qa301 //gender-qa002 hk-qa301
+tab1 gender hk //这才真正地消掉了它们
+recode gender(5=0)
+recode hk(3=0)(5=.)
+label define genderlabel 0 "女性" 1 "男性" //重新定义值标签。具体原理见其它文档
+label define hklabel 0 "农业户口" 1 "非农户口"
+label values gender genderlabel //把值标签贴在值上面
+label values hk hklabel
+tab1 age gender hk married m_income party educ height weight //终于清理完成
