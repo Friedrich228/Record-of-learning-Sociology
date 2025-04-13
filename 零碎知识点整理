@@ -8,3 +8,4 @@
       第一步：label define valuelabel num1 "XXX" num2 "XXY" num3 "XYY" //valuelabel 你可以任意取名，它只是代表之后的数值与内涵一一对应都会被放在这个值标签名称之下
       第二部：label values variablename valuelabel //把这个值标签的内容对应到前面那个变量之下
   便捷之处：比如说我们定义了yesno这个值标签组的内容为，1“是” 0“否”，那么在赋予其它二元取值的变量取值含义的时候，直接逐个捆绑即可。
+**# 关于宏变量及其简单运用——由直方图绘制探索到的知识点（待补充）
