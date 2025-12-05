@@ -1,0 +1,32 @@
+** 作图总结：主要是基本语法、注意事项和图形保存
+//options非常丰富，包括颜色、形状、大小、分组等，在使用的时候应当根据研究需要来进行选择，具体可以使用help命令去查询，多次尝试，才能跑出来满意的图表
+
+* 条形图
+graph bar variable, [options]
+* 直方图
+hist variable, [options]
+* 饼图
+graph pie variable, [options]
+* 箱线图
+graph box variable, [options]
+* 矩阵图
+graph matrix var1 var2 var3, [options]
+* 图形保存、编辑、合并
+graph box height, over(gender)
+graph save "身高的箱线图（分不同性别组）" //graph的存储不需要提供路径，只要名字就可以了
+graph box height, over(gender) by(hk)
+graph save "身高的箱线图（分不同性别组）", replace //对其作出改动再保存的话，需要用replace，这个跟你修改数据库以后的存储是一个思路；可以另存为也可以覆盖
+hist educ, percent discrete by(gender,total) start(0) width(2) normal xtitle("被访者最高受教育程度") xsize(4) ysize(3) saving("受教育程度的直方图") //可以在末尾直接save了，不需要另写一行
+graph combine "受教育程度的直方图" "身高的箱线图（分不同性别组）", saving("看下整合的效果")
+
+graph box height if age>=0 & age<=20, saving("身高") //如果单位不同，如何整合？接下来会演示这个过程
+graph box age if age>=0 & age<=20, saving("年龄") 
+egen m_height=mean(height), by(age)
+label variable m_height "年龄身高均值（厘米）"
+scatter m_height age if age>=0 & age<=20,saving("身高年龄")
+graph combine "身高" "年龄" "身高年龄", saving("终极效果图") //不一条条对它们进行处理，直接整合，就只是简单地陈列，没有实际意义
+
+graph box height if age>=0 & age<=20, fxsize(20) caption("") ytitle("") ylabel("") ytick(,grid) saving("身高",replace) //fxsize设置x轴宽度，只使用默认的20%，y的title label都不显示，ytick使用刻度线。生成的箱线图是细长的
+graph hbox age if age>=0 & age<=20, fysize(20) ytitle("年龄") ytick(,grid) saving("年龄",replace)
+scatter m_height age if age>=0 & age<=20, ytitle("身高") xtitle("") ylabel(,grid) saving("身高年龄", replace)
+graph combine "身高" "身高年龄" "年龄", cols(2) holes(3) iscale(0.95) imargin(0 0 0 0) saving("终极效果图", replace) //cols排列2列，holes第三象限空着，iscale扩大或缩小 imargin中间不要留空
